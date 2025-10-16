@@ -19,6 +19,7 @@ pub enum SlashCommand {
     Init,
     Compact,
     Undo,
+    Subtask,
     Diff,
     Mention,
     Status,
@@ -38,6 +39,7 @@ impl SlashCommand {
             SlashCommand::Compact => "summarize conversation to prevent hitting the context limit",
             SlashCommand::Review => "review my current changes and find issues",
             SlashCommand::Undo => "restore the workspace to the last Codex snapshot",
+            SlashCommand::Subtask => "spawn a new session in a separate terminal with recent context",
             SlashCommand::Quit => "exit Codex",
             SlashCommand::Diff => "show git diff (including untracked files)",
             SlashCommand::Mention => "mention a file",
@@ -68,7 +70,8 @@ impl SlashCommand {
             | SlashCommand::Approvals
             | SlashCommand::Review
             | SlashCommand::Logout => false,
-            SlashCommand::Diff
+            SlashCommand::Subtask
+            | SlashCommand::Diff
             | SlashCommand::Mention
             | SlashCommand::Status
             | SlashCommand::Mcp

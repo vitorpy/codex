@@ -66,6 +66,7 @@ const LARGE_PASTE_CHAR_THRESHOLD: usize = 1000;
 pub enum InputResult {
     Submitted(String),
     Command(SlashCommand),
+    SubtaskCommand { last_n_messages: usize, prompt: String },
     None,
 }
 
@@ -916,6 +917,17 @@ impl ChatComposer {
                 // but Enter should still dispatch the command rather than submit
                 // literal text.
                 let first_line = self.textarea.text().lines().next().unwrap_or("");
+
+                // Handle /subtask command with arguments
+                if let Some((name, rest)) = parse_slash_name(first_line)
+                    && name == "subtask"
+                    && !rest.is_empty()
+                {
+                    let (last_n_messages, prompt) = parse_subtask_args(rest);
+                    self.textarea.set_text("");
+                    return (InputResult::SubtaskCommand { last_n_messages, prompt }, true);
+                }
+
                 if let Some((name, rest)) = parse_slash_name(first_line)
                     && rest.is_empty()
                     && let Some((_n, cmd)) = built_in_slash_commands()
@@ -1643,6 +1655,37 @@ fn prompt_selection_action(
             }
         }
     }
+}
+
+/// Parse arguments for the /subtask command.
+/// Format: `/subtask [--last N] <prompt>`
+/// Returns (last_n_messages, prompt)
+fn parse_subtask_args(args: &str) -> (usize, String) {
+    const DEFAULT_MESSAGE_COUNT: usize = 10;
+
+    let args = args.trim();
+    if args.is_empty() {
+        return (DEFAULT_MESSAGE_COUNT, String::new());
+    }
+
+    // Check if args start with --last
+    if let Some(rest) = args.strip_prefix("--last") {
+        let rest = rest.trim_start();
+        // Try to parse the next token as a number
+        let mut parts = rest.splitn(2, |c: char| c.is_whitespace());
+        if let Some(num_str) = parts.next() {
+            if let Ok(n) = num_str.parse::<usize>() {
+                // Successfully parsed number, rest is the prompt
+                let prompt = parts.next().unwrap_or("").trim().to_string();
+                return (n, prompt);
+            }
+        }
+        // Failed to parse number, treat everything as prompt
+        return (DEFAULT_MESSAGE_COUNT, rest.to_string());
+    }
+
+    // No --last flag, entire thing is the prompt
+    (DEFAULT_MESSAGE_COUNT, args.to_string())
 }
 
 #[cfg(test)]

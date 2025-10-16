@@ -407,6 +407,9 @@ impl App {
                     ));
                 }
             },
+            AppEvent::SpawnSubtask { last_n_messages, prompt } => {
+                self.handle_spawn_subtask(last_n_messages, prompt).await;
+            }
         }
         Ok(true)
     }
@@ -418,6 +421,51 @@ impl App {
     fn on_update_reasoning_effort(&mut self, effort: Option<ReasoningEffortConfig>) {
         self.chat_widget.set_reasoning_effort(effort);
         self.config.model_reasoning_effort = effort;
+    }
+
+    async fn handle_spawn_subtask(&mut self, _last_n_messages: usize, prompt: String) {
+        use crate::spawn_terminal::spawn_terminal_with_codex;
+
+        if prompt.is_empty() {
+            self.chat_widget.add_error_message(
+                "Subtask prompt cannot be empty. Usage: /subtask [--last N] <prompt>".to_string(),
+            );
+            return;
+        }
+
+        // Build arguments for the new codex instance
+        // For now, we'll just pass the prompt - history integration can be added later
+        let mut args = vec![];
+
+        // Pass current working directory
+        if let Some(cwd_str) = self.config.cwd.to_str() {
+            args.push("-C".to_string());
+            args.push(cwd_str.to_string());
+        }
+
+        // Pass the prompt
+        args.push(prompt.clone());
+
+        // Spawn the terminal
+        match spawn_terminal_with_codex(&args, Some(&self.config.cwd)) {
+            Ok(_child) => {
+                self.chat_widget.add_info_message(
+                    format!("Spawned subtask in new terminal with prompt: {}",
+                        if prompt.len() > 50 {
+                            format!("{}...", &prompt[..50])
+                        } else {
+                            prompt
+                        }
+                    ),
+                    None,
+                );
+            }
+            Err(e) => {
+                self.chat_widget.add_error_message(
+                    format!("Failed to spawn subtask terminal: {}", e),
+                );
+            }
+        }
     }
 
     async fn handle_key_event(&mut self, tui: &mut tui::Tui, key_event: KeyEvent) {

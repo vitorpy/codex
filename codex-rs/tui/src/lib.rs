@@ -63,6 +63,7 @@ mod selection_list;
 mod session_log;
 mod shimmer;
 mod slash_command;
+mod spawn_terminal;
 mod status;
 mod status_indicator_widget;
 mod streaming;

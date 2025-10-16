@@ -1095,6 +1095,12 @@ impl ChatWidget {
                     InputResult::Command(cmd) => {
                         self.dispatch_command(cmd);
                     }
+                    InputResult::SubtaskCommand { last_n_messages, prompt } => {
+                        self.app_event_tx.send(AppEvent::SpawnSubtask {
+                            last_n_messages,
+                            prompt,
+                        });
+                    }
                     InputResult::None => {}
                 }
             }
@@ -1192,6 +1198,10 @@ impl ChatWidget {
             }
             SlashCommand::Mcp => {
                 self.add_mcp_output();
+            }
+            SlashCommand::Subtask => {
+                let message = "Usage: /subtask [--last N] <prompt>\n\nExample: /subtask --last 5 Optimize this code for performance";
+                self.add_info_message(message.to_string(), None);
             }
             #[cfg(debug_assertions)]
             SlashCommand::TestApproval => {

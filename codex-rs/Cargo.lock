@@ -1431,6 +1431,7 @@ dependencies = [
  "unicode-width 0.2.1",
  "url",
  "vt100",
+ "which",
 ]
 
 [[package]]

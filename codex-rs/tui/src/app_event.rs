@@ -87,4 +87,10 @@ pub(crate) enum AppEvent {
 
     /// Open the approval popup.
     FullScreenApprovalRequest(ApprovalRequest),
+
+    /// Spawn a subtask in a new terminal with recent conversation context.
+    SpawnSubtask {
+        last_n_messages: usize,
+        prompt: String,
+    },
 }

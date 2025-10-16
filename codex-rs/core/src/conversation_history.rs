@@ -35,6 +35,13 @@ impl ConversationHistory {
     pub(crate) fn replace(&mut self, items: Vec<ResponseItem>) {
         self.items = items;
     }
+
+    /// Take the last N messages from history.
+    /// Returns up to N messages, or all messages if there are fewer than N.
+    pub fn take_last_n(&self, n: usize) -> Vec<ResponseItem> {
+        let start = self.items.len().saturating_sub(n);
+        self.items[start..].to_vec()
+    }
 }
 
 /// Anything that is not a system message or "reasoning" message is considered
