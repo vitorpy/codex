@@ -1095,9 +1095,14 @@ impl ChatWidget {
                     InputResult::Command(cmd) => {
                         self.dispatch_command(cmd);
                     }
-                    InputResult::SubtaskCommand { last_n_messages, prompt } => {
+                    InputResult::SubtaskCommand {
+                        last_n_messages,
+                        model,
+                        prompt,
+                    } => {
                         self.app_event_tx.send(AppEvent::SpawnSubtask {
                             last_n_messages,
+                            model,
                             prompt,
                         });
                     }
@@ -1200,7 +1205,7 @@ impl ChatWidget {
                 self.add_mcp_output();
             }
             SlashCommand::Subtask => {
-                let message = "Usage: /subtask [--last N] <prompt>\n\nExample: /subtask --last 5 Optimize this code for performance";
+                let message = "Usage: /subtask [--last N] [--model MODEL] <prompt>\n\nExamples:\n  /subtask Optimize this code for performance\n  /subtask --last 5 Refactor this module\n  /subtask --model claude-opus-4 Fix the performance issue";
                 self.add_info_message(message.to_string(), None);
             }
             #[cfg(debug_assertions)]

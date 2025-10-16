@@ -66,7 +66,11 @@ const LARGE_PASTE_CHAR_THRESHOLD: usize = 1000;
 pub enum InputResult {
     Submitted(String),
     Command(SlashCommand),
-    SubtaskCommand { last_n_messages: usize, prompt: String },
+    SubtaskCommand {
+        last_n_messages: usize,
+        model: Option<String>,
+        prompt: String,
+    },
     None,
 }
 
@@ -923,9 +927,16 @@ impl ChatComposer {
                     && name == "subtask"
                     && !rest.is_empty()
                 {
-                    let (last_n_messages, prompt) = parse_subtask_args(rest);
+                    let (last_n_messages, model, prompt) = parse_subtask_args(rest);
                     self.textarea.set_text("");
-                    return (InputResult::SubtaskCommand { last_n_messages, prompt }, true);
+                    return (
+                        InputResult::SubtaskCommand {
+                            last_n_messages,
+                            model,
+                            prompt,
+                        },
+                        true,
+                    );
                 }
 
                 if let Some((name, rest)) = parse_slash_name(first_line)
@@ -1658,34 +1669,59 @@ fn prompt_selection_action(
 }
 
 /// Parse arguments for the /subtask command.
-/// Format: `/subtask [--last N] <prompt>`
-/// Returns (last_n_messages, prompt)
-fn parse_subtask_args(args: &str) -> (usize, String) {
+/// Format: `/subtask [--last N] [--model MODEL] <prompt>`
+/// Returns (last_n_messages, model, prompt)
+fn parse_subtask_args(args: &str) -> (usize, Option<String>, String) {
     const DEFAULT_MESSAGE_COUNT: usize = 10;
 
     let args = args.trim();
     if args.is_empty() {
-        return (DEFAULT_MESSAGE_COUNT, String::new());
+        return (DEFAULT_MESSAGE_COUNT, None, String::new());
     }
 
-    // Check if args start with --last
-    if let Some(rest) = args.strip_prefix("--last") {
-        let rest = rest.trim_start();
-        // Try to parse the next token as a number
-        let mut parts = rest.splitn(2, |c: char| c.is_whitespace());
-        if let Some(num_str) = parts.next() {
-            if let Ok(n) = num_str.parse::<usize>() {
-                // Successfully parsed number, rest is the prompt
-                let prompt = parts.next().unwrap_or("").trim().to_string();
-                return (n, prompt);
+    let mut last_n = DEFAULT_MESSAGE_COUNT;
+    let mut model = None;
+    let mut remaining = args;
+
+    // Parse flags in any order
+    loop {
+        let trimmed = remaining.trim_start();
+
+        // Check for --last flag
+        if let Some(rest) = trimmed.strip_prefix("--last") {
+            let rest = rest.trim_start();
+            let mut parts = rest.splitn(2, |c: char| c.is_whitespace());
+            if let Some(num_str) = parts.next() {
+                if let Ok(n) = num_str.parse::<usize>() {
+                    last_n = n;
+                    remaining = parts.next().unwrap_or("").trim_start();
+                    continue;
+                }
             }
+            // Failed to parse number, treat rest as prompt
+            return (last_n, model, rest.to_string());
         }
-        // Failed to parse number, treat everything as prompt
-        return (DEFAULT_MESSAGE_COUNT, rest.to_string());
+
+        // Check for --model flag
+        if let Some(rest) = trimmed.strip_prefix("--model") {
+            let rest = rest.trim_start();
+            let mut parts = rest.splitn(2, |c: char| c.is_whitespace());
+            if let Some(model_name) = parts.next() {
+                if !model_name.is_empty() {
+                    model = Some(model_name.to_string());
+                    remaining = parts.next().unwrap_or("").trim_start();
+                    continue;
+                }
+            }
+            // No model name provided, treat rest as prompt
+            return (last_n, model, rest.to_string());
+        }
+
+        // No more flags, remaining is the prompt
+        break;
     }
 
-    // No --last flag, entire thing is the prompt
-    (DEFAULT_MESSAGE_COUNT, args.to_string())
+    (last_n, model, remaining.to_string())
 }
 
 #[cfg(test)]

@@ -407,8 +407,13 @@ impl App {
                     ));
                 }
             },
-            AppEvent::SpawnSubtask { last_n_messages, prompt } => {
-                self.handle_spawn_subtask(last_n_messages, prompt).await;
+            AppEvent::SpawnSubtask {
+                last_n_messages,
+                model,
+                prompt,
+            } => {
+                self.handle_spawn_subtask(last_n_messages, model, prompt)
+                    .await;
             }
         }
         Ok(true)
@@ -423,12 +428,18 @@ impl App {
         self.config.model_reasoning_effort = effort;
     }
 
-    async fn handle_spawn_subtask(&mut self, _last_n_messages: usize, prompt: String) {
+    async fn handle_spawn_subtask(
+        &mut self,
+        _last_n_messages: usize,
+        model: Option<String>,
+        prompt: String,
+    ) {
         use crate::spawn_terminal::spawn_terminal_with_codex;
 
         if prompt.is_empty() {
             self.chat_widget.add_error_message(
-                "Subtask prompt cannot be empty. Usage: /subtask [--last N] <prompt>".to_string(),
+                "Subtask prompt cannot be empty. Usage: /subtask [--last N] [--model MODEL] <prompt>"
+                    .to_string(),
             );
             return;
         }
@@ -443,14 +454,27 @@ impl App {
             args.push(cwd_str.to_string());
         }
 
+        // Pass the model if specified
+        if let Some(model_slug) = &model {
+            args.push("-m".to_string());
+            args.push(model_slug.clone());
+        }
+
         // Pass the prompt
         args.push(prompt.clone());
 
         // Spawn the terminal
         match spawn_terminal_with_codex(&args, Some(&self.config.cwd)) {
             Ok(_child) => {
+                let model_info = if let Some(m) = model {
+                    format!(" (model: {})", m)
+                } else {
+                    String::new()
+                };
                 self.chat_widget.add_info_message(
-                    format!("Spawned subtask in new terminal with prompt: {}",
+                    format!(
+                        "Spawned subtask in new terminal{} with prompt: {}",
+                        model_info,
                         if prompt.len() > 50 {
                             format!("{}...", &prompt[..50])
                         } else {
@@ -461,9 +485,8 @@ impl App {
                 );
             }
             Err(e) => {
-                self.chat_widget.add_error_message(
-                    format!("Failed to spawn subtask terminal: {}", e),
-                );
+                self.chat_widget
+                    .add_error_message(format!("Failed to spawn subtask terminal: {}", e));
             }
         }
     }

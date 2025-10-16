@@ -91,6 +91,7 @@ pub(crate) enum AppEvent {
     /// Spawn a subtask in a new terminal with recent conversation context.
     SpawnSubtask {
         last_n_messages: usize,
+        model: Option<String>,
         prompt: String,
     },
 }
