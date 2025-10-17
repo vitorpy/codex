@@ -94,4 +94,7 @@ pub(crate) enum AppEvent {
         model: Option<String>,
         prompt: String,
     },
+
+    /// Rejoin a subtask by reading the most recent session and injecting results.
+    RejoinSubtask,
 }

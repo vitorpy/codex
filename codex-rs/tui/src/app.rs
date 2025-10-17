@@ -415,6 +415,9 @@ impl App {
                 self.handle_spawn_subtask(last_n_messages, model, prompt)
                     .await;
             }
+            AppEvent::RejoinSubtask => {
+                self.handle_rejoin_subtask().await;
+            }
         }
         Ok(true)
     }
@@ -487,6 +490,121 @@ impl App {
             Err(e) => {
                 self.chat_widget
                     .add_error_message(format!("Failed to spawn subtask terminal: {}", e));
+            }
+        }
+    }
+
+    async fn handle_rejoin_subtask(&mut self) {
+        use codex_core::get_conversations;
+        use codex_core::INTERACTIVE_SESSION_SOURCES;
+        use codex_core::ContentItem;
+        use codex_protocol::protocol::RolloutLine;
+        use codex_protocol::protocol::RolloutItem;
+        use codex_core::protocol::EventMsg;
+        use codex_core::ResponseItem;
+
+        // Get the most recent session
+        match get_conversations(&self.config.codex_home, 1, None, INTERACTIVE_SESSION_SOURCES).await {
+            Ok(page) if !page.items.is_empty() => {
+                let recent_session = &page.items[0];
+                let session_path = &recent_session.path;
+
+                // Extract session ID from filename
+                let session_id = session_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .and_then(|s| s.split('-').last())
+                    .unwrap_or("unknown");
+
+                // Read the full rollout file to get the last messages
+                match tokio::fs::read_to_string(session_path).await {
+                    Ok(content) => {
+                        // Parse JSONL and collect last N assistant messages
+                        let mut messages: Vec<String> = Vec::new();
+
+                        for line in content.lines().rev() {
+                            let trimmed = line.trim();
+                            if trimmed.is_empty() {
+                                continue;
+                            }
+
+                            if let Ok(rollout_line) = serde_json::from_str::<RolloutLine>(trimmed) {
+                                match rollout_line.item {
+                                    RolloutItem::ResponseItem(item) => {
+                                        // Extract text from ResponseItem based on its variant
+                                        let text = match item {
+                                            ResponseItem::Message { content, .. } => {
+                                                // Extract text from content items
+                                                content.iter()
+                                                    .filter_map(|c| match c {
+                                                        ContentItem::OutputText { text } => Some(text.as_str()),
+                                                        _ => None,
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                                    .join("")
+                                            }
+                                            _ => String::new(),
+                                        };
+
+                                        if !text.is_empty() {
+                                            messages.push(text);
+                                            if messages.len() >= 3 {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    RolloutItem::EventMsg(EventMsg::UserMessage(_)) => {
+                                        // Stop when we hit a user message - we want the assistant's responses
+                                        if !messages.is_empty() {
+                                            break;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+
+                        messages.reverse();
+
+                        if messages.is_empty() {
+                            self.chat_widget.add_error_message(
+                                "No assistant messages found in the most recent subtask session.".to_string()
+                            );
+                            return;
+                        }
+
+                        // Format the summary
+                        let summary = messages.join("");
+                        let truncated = if summary.len() > 500 {
+                            format!("{}...", &summary[..500])
+                        } else {
+                            summary
+                        };
+
+                        let message = format!(
+                            "Subtask {} results:\n\n{}",
+                            session_id,
+                            truncated
+                        );
+
+                        self.chat_widget.add_info_message(message, None);
+                    }
+                    Err(e) => {
+                        self.chat_widget.add_error_message(
+                            format!("Failed to read subtask session: {}", e)
+                        );
+                    }
+                }
+            }
+            Ok(_) => {
+                self.chat_widget.add_error_message(
+                    "No recent subtask sessions found to rejoin.".to_string()
+                );
+            }
+            Err(e) => {
+                self.chat_widget.add_error_message(
+                    format!("Failed to list sessions: {}", e)
+                );
             }
         }
     }

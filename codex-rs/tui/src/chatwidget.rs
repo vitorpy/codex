@@ -1208,6 +1208,10 @@ impl ChatWidget {
                 let message = "Usage: /subtask [--last N] [--model MODEL] <prompt>\n\nExamples:\n  /subtask Optimize this code for performance\n  /subtask --last 5 Refactor this module\n  /subtask --model claude-opus-4 Fix the performance issue";
                 self.add_info_message(message.to_string(), None);
             }
+            SlashCommand::Rejoin => {
+                // Trigger rejoin event - will read most recent session and inject results
+                self.app_event_tx.send(AppEvent::RejoinSubtask);
+            }
             #[cfg(debug_assertions)]
             SlashCommand::TestApproval => {
                 use codex_core::protocol::EventMsg;
