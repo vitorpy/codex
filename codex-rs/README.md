@@ -8,10 +8,12 @@ Today, the easiest way to install Codex is via `npm`:
 
 ```shell
 npm i -g @openai/codex
-codex
+vcodex
 ```
 
 You can also install via Homebrew (`brew install codex`) or download a platform-specific release directly from our [GitHub Releases](https://github.com/openai/codex/releases).
+
+**Note:** This is vitorpy's fork. The binary is named `vcodex` to distinguish it from vanilla codex.
 
 ## What's new in the Rust CLI
 
@@ -29,23 +31,23 @@ Codex CLI functions as an MCP client that allows the Codex CLI and IDE extension
 
 #### MCP server (experimental)
 
-Codex can be launched as an MCP _server_ by running `codex mcp-server`. This allows _other_ MCP clients to use Codex as a tool for another agent.
+Codex can be launched as an MCP _server_ by running `vcodex mcp-server`. This allows _other_ MCP clients to use Codex as a tool for another agent.
 
 Use the [`@modelcontextprotocol/inspector`](https://github.com/modelcontextprotocol/inspector) to try it out:
 
 ```shell
-npx @modelcontextprotocol/inspector codex mcp-server
+npx @modelcontextprotocol/inspector vcodex mcp-server
 ```
 
-Use `codex mcp` to add/list/get/remove MCP server launchers defined in `config.toml`, and `codex mcp-server` to run the MCP server directly.
+Use `vcodex mcp` to add/list/get/remove MCP server launchers defined in `config.toml`, and `vcodex mcp-server` to run the MCP server directly.
 
 ### Notifications
 
 You can enable notifications by configuring a script that is run whenever the agent finishes a turn. The [notify documentation](../docs/config.md#notify) includes a detailed example that explains how to get desktop notifications via [terminal-notifier](https://github.com/julienXX/terminal-notifier) on macOS.
 
-### `codex exec` to run Codex programmatically/non-interactively
+### `vcodex exec` to run Codex programmatically/non-interactively
 
-To run Codex non-interactively, run `codex exec PROMPT` (you can also pass the prompt via `stdin`) and Codex will work on your task until it decides that it is done and exits. Output is printed to the terminal directly. You can set the `RUST_LOG` environment variable to see more about what's going on.
+To run Codex non-interactively, run `vcodex exec PROMPT` (you can also pass the prompt via `stdin`) and Codex will work on your task until it decides that it is done and exits. Output is printed to the terminal directly. You can set the `RUST_LOG` environment variable to see more about what's going on.
 
 ### Use `@` for file search
 
@@ -59,16 +61,16 @@ In the transcript preview, the footer shows an `Esc edit prev` hint while editin
 
 ### `--cd`/`-C` flag
 
-Sometimes it is not convenient to `cd` to the directory you want Codex to use as the "working root" before running Codex. Fortunately, `codex` supports a `--cd` option so you can specify whatever folder you want. You can confirm that Codex is honoring `--cd` by double-checking the **workdir** it reports in the TUI at the start of a new session.
+Sometimes it is not convenient to `cd` to the directory you want Codex to use as the "working root" before running Codex. Fortunately, `vcodex` supports a `--cd` option so you can specify whatever folder you want. You can confirm that Codex is honoring `--cd` by double-checking the **workdir** it reports in the TUI at the start of a new session.
 
 ### Shell completions
 
 Generate shell completion scripts via:
 
 ```shell
-codex completion bash
-codex completion zsh
-codex completion fish
+vcodex completion bash
+vcodex completion zsh
+vcodex completion fish
 ```
 
 ### Experimenting with the Codex Sandbox
@@ -77,14 +79,14 @@ To test to see what happens when a command is run under the sandbox provided by 
 
 ```
 # macOS
-codex sandbox macos [--full-auto] [COMMAND]...
+vcodex sandbox macos [--full-auto] [COMMAND]...
 
 # Linux
-codex sandbox linux [--full-auto] [COMMAND]...
+vcodex sandbox linux [--full-auto] [COMMAND]...
 
 # Legacy aliases
-codex debug seatbelt [--full-auto] [COMMAND]...
-codex debug landlock [--full-auto] [COMMAND]...
+vcodex debug seatbelt [--full-auto] [COMMAND]...
+vcodex debug landlock [--full-auto] [COMMAND]...
 ```
 
 ### Selecting a sandbox policy via `--sandbox`
@@ -93,16 +95,16 @@ The Rust CLI exposes a dedicated `--sandbox` (`-s`) flag that lets you pick the 
 
 ```shell
 # Run Codex with the default, read-only sandbox
-codex --sandbox read-only
+vcodex --sandbox read-only
 
 # Allow the agent to write within the current workspace while still blocking network access
-codex --sandbox workspace-write
+vcodex --sandbox workspace-write
 
 # Danger! Disable sandboxing entirely (only do this if you are already running in a container or other isolated env)
-codex --sandbox danger-full-access
+vcodex --sandbox danger-full-access
 ```
 
-The same setting can be persisted in `~/.codex/config.toml` via the top-level `sandbox_mode = "MODE"` key, e.g. `sandbox_mode = "workspace-write"`.
+The same setting can be persisted in `~/.vcodex/config.toml` via the top-level `sandbox_mode = "MODE"` key, e.g. `sandbox_mode = "workspace-write"`.
 
 ## Code Organization
 
